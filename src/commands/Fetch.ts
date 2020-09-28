@@ -8,6 +8,10 @@ const endpoints = {
 		'https://datawrapper.dwcdn.net/Z30uF',
 		'https://datawrapper.dwcdn.net/NERr1',
 	],
+	legacy: [
+			'https://datawrapper.dwcdn.net/kHBdR',
+			'https://datawrapper.dwcdn.net/kitO7',
+	],
 };
 
 class Fetch implements ICommand {
@@ -86,7 +90,7 @@ const grabPage = async (url: string, format: string) => {
       x: 0,
       y: 125,
       width: 750,
-      height: 527,
+      height: 525,
     },
   });
 
