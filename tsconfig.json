@@ -1,0 +1,12 @@
+{
+	"compilerOptions": {
+		"module": "commonjs",
+		"target": "esnext",
+		"types": ["node", "jest"],
+		"outDir": "build",
+		"removeComments": true,
+		"pretty": true,
+		"esModuleInterop": true
+	},
+	"exclude": ["node_modules", "build", "src/tests"]
+}
