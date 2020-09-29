@@ -15,7 +15,9 @@ const endpoints = {
 };
 
 class Fetch implements ICommand {
-  public name = 'fetch `format` `alternate (optional)`'
+  public name = 'fetch'
+	//public name = 'fetch `format` `alternate (optional)`'
+	//lazy args fix
   public description = 'Fetches and displays metagame data.'
 
   async execute({ msg, args }) {
