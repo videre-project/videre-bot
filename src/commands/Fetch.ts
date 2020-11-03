@@ -12,6 +12,10 @@ const endpoints = {
     'https://datawrapper.dwcdn.net/kHBdR',
     'https://datawrapper.dwcdn.net/kitO7',
   ],
+  projectmodern: [
+    'https://datawrapper.dwcdn.net/EWToX/',
+    'https://datawrapper.dwcdn.net/BpHMa/',
+  ],
 };
 
 class Fetch implements ICommand {
