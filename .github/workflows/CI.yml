@@ -1,0 +1,24 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Check build health
+        run: yarn build
+
+      - name: Run tests
+        run: yarn test --silent
+
+      - name: Check for regressions
+        run: yarn lint
