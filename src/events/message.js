@@ -10,6 +10,8 @@ const MessageEvent = {
   async execute(client, msg) {
     try {
       if (msg.author.bot) {
+        // Is ephemeral message
+        if (Object.values(msg.flags)[0] == 64) return;
         // Add '❌' reaction to mimic UX of ephemeral messages
         if (msg?.embeds[0]?.title == 'Error') await msg.react('❌');
         return;

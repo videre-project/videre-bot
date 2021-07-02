@@ -27,7 +27,10 @@ const RawEvent = {
             return object;
           }, {}) : {};
 
-          const output = await command.execute({ ...client, interaction, args });
+          // Pass in client uptime
+          const uptime = client.uptime;
+
+          const output = await command.execute({ uptime, ...client, interaction, args });
           if (!output) return;
 
           const data = validateMessage(output);
