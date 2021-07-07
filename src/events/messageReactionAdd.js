@@ -26,7 +26,7 @@ const MessageReactionAdd = {
                 .then(message => message.delete());
         }
     } catch (error) {
-      console.error(chalk.white(`${chalk.red(`[events/messageReactionAdd]`)}\n>> ${chalk.red(error.stack)}`));
+      console.error(chalk.white(`${chalk.yellow(`[events/messageReactionAdd]`)}\n>> ${chalk.red(error.stack)}`));
     }
   },
 };

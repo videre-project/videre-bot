@@ -1,6 +1,7 @@
 import chalk from 'chalk';
+import { WebhookClient } from 'discord.js';
 import { validateMessage, registerComponents } from 'utils/discord';
-import { INTERACTION_TYPE, INTERACTION_RESPONSE_TYPE } from 'constants';
+import { INTERACTION_TYPE, INTERACTION_RESPONSE_TYPE, ERROR_DEFAULTS } from 'constants';
 
 /**
  * Handles interaction events.
@@ -27,11 +28,27 @@ const RawEvent = {
             return object;
           }, {}) : {};
 
-          // Pass in client uptime
-          const uptime = client.uptime;
-
-          const output = await command.execute({ uptime, ...client, interaction, args });
+          const output = await command.execute({ client, interaction, args });
           if (!output) return;
+          if (output?.deferred == true) {
+            const data = validateMessage(output.data);
+            await new WebhookClient(client.user.id, interaction.token).send(data);
+            // await client.api.webhooks(client.user.id, interaction.token)
+            //   .messages('@original').patch({
+            //     data: {
+            //       // type: INTERACTION_RESPONSE_TYPE.DEFERRED_UPDATE_MESSAGE,//CHANNEL_MESSAGE_WITH_SOURCE,
+            //       data,
+            //     },
+            //   });
+            
+            // Send follow-up response through `WebhookClient`
+            if (!data.components) return;
+            await new WebhookClient(client.user.id, interaction.token).send(validateMessage({
+              ...ERROR_DEFAULTS,
+              description: `**Note:** Button components aren't preserved with deferred\nresponses currently, which may break some functionality.`
+            }));
+            return;
+          }
 
           const data = validateMessage(output);
           await client.api.interactions(interaction.id, interaction.token).callback.post({
@@ -73,7 +90,7 @@ const RawEvent = {
           return;
       }
     } catch (error) {
-      console.error(chalk.white(`${chalk.red(`[events/raw]`)}\n>> ${chalk.red(error.stack)}`));
+      console.error(chalk.white(`${chalk.yellow(`[events/raw]`)}\n>> ${chalk.red(error.stack)}`));
     }
   },
 };

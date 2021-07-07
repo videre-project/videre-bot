@@ -10,7 +10,7 @@ const ReadyEvent = {
     try {
       console.info(`${chalk.cyanBright('[Bot]')} Connected as ${client.user.username}${chalk.grey(`#${client.user.discriminator}`)}`);
     } catch {
-      console.error(chalk.white(`${chalk.red(`[events/ready]`)}\n>> ${chalk.red(error.stack)}`));
+      console.error(chalk.white(`${chalk.yellow(`[events/ready]`)}\n>> ${chalk.red(error.stack)}`));
     }
   },
 };

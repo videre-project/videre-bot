@@ -18,6 +18,16 @@ import { Intents } from 'discord.js';
     { name: 'Challenges', value: 'challenge' },
     { name: 'Premiers', value: 'premier' },
   ],
+  // EVENT_TYPES = [
+  //   'mocs',
+  //   'preliminary',
+  //   'challenge',
+  //   'champs',
+  //   'premier',
+  //   'super-qualifier',
+  //   'players-tour-qualifier',
+  //   'showcase-challenge',
+  // ],
   COLORS: ['C', 'W', 'U', 'B', 'R', 'G'],
   CARD_TYPES: ['Creature', 'Planeswalker', 'Artifact', 'Enchantment', 'Instant', 'Sorcery', 'Land'],
   COMPANIONS: [
@@ -44,6 +54,15 @@ export const CLIENT_INTENTS = [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGE
  */
 export const EMBED_DEFAULTS = {
   color: 0x049ef4,
+};
+
+/**
+ * Error Embed default properties.
+ */
+ export const ERROR_DEFAULTS = {
+  title: "Error",
+  color: 0xe74c3c,
+  ephemeral: true,
 };
 
 /**

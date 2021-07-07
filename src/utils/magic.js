@@ -1,4 +1,5 @@
 import { MTGO } from 'constants';
+import { createCanvas, loadImage } from 'canvas';
 import { groupBy, dynamicSortMultiple } from 'utils/database';
 
 /**
@@ -13,7 +14,7 @@ import { groupBy, dynamicSortMultiple } from 'utils/database';
 /**
  * Formats MTGO Event urls to prettified event name.
  */
- export const formatEvent = function(url, uid) {
+ export const formatEvent = function(url, uid, date) {
   return `${
     url.toLowerCase()
       .split("https://magic.wizards.com/en/articles/archive/mtgo-standings/")[1]
@@ -24,28 +25,23 @@ import { groupBy, dynamicSortMultiple } from 'utils/database';
       .replace(/\s\s+/g, ' ')
       .trim()
     } #${uid} (${
-        (new Date(url.toLowerCase()
-          .split("https://magic.wizards.com/en/articles/archive/mtgo-standings/")[1]
-          .replace(/[A-Za-z]/g, '')
-          .replace(/^-+/gm, '')
-          .replace(/-/g, '/')
+        (new Date(date
           .split('/')
           .map((s) => parseInt(s))
           .join('/')
-          .match(/(?<=\/).*/g)
-          +'/0')
-        ).toDateString()
+        )).toDateString()
           .split(' ')
-          .slice(1, -1)
-          .map((s) => isNaN(s) ? s : getNumberWithOrdinal(s))
-          .join(' ')
+          .slice(0, -1)
+          .map((s) => isNaN(s) ? s : getNumberWithOrdinal(parseInt(s)))
+          .join(', ')
+          .replace(/, ([^,]*)$/, ' $1')
     })`;
 };
 
 /**
  * Formats Scryfall collection and deck object into embed fields.
  */
-export const formatDeck = function(json, deck, emojiGuild) {
+export const formatDeck = function(json, deck, emojiGuild, mode) {
   const data = json.map(({ name, color_identity, cmc, image_uris, colors, type_line, mana_cost, card_faces, layout }, i) => {
     let front_face_props = [];
     switch(image_uris) {
@@ -96,8 +92,8 @@ export const formatDeck = function(json, deck, emojiGuild) {
   });
   
   const groupedData = groupBy(data, card => card.display_type);
-  let fields = [];
-  [ ...MTGO.CARD_TYPES, 'Companion', 'Sideboard' ].forEach((type) => {
+  let array = [];
+  [ 'Companion', ...MTGO.CARD_TYPES, 'Sideboard' ].forEach((type) => {
     if (data.some(card => card.display_type == type)) {
       const subsetData = groupedData.get(type)
         .map(({ color_identity, colors, ...rest }, i) => {
@@ -115,17 +111,104 @@ export const formatDeck = function(json, deck, emojiGuild) {
             ...rest
           };
         })
-      const subsetSum = Array.from(subsetData.reduce(
-        (m, {display_type, qty}) => m.set(display_type, (m.get(display_type) || 0) + qty), new Map
-      ), ([display_type, qty]) => qty);
-      fields.push({
-        name: `${type == 'Sideboard' ? type : (type == 'Sorcery' ? 'Sorceries' : type + 's')} (${subsetSum})`,
-        value: subsetData.map(({ qty, name }) => `**${qty}** ${name}`).join('\n')
-      });
+      switch (mode) {
+        case 'decklist':
+          const subsetSum = Array.from(subsetData.reduce(
+            (m, {display_type, qty}) => m.set(display_type, (m.get(display_type) || 0) + qty), new Map
+          ), ([display_type, qty]) => qty);
+          array.push({
+            name: `${type == 'Sideboard' ? type : (type == 'Sorcery' ? 'Sorceries' : type + 's')} (${subsetSum})`,
+            value: subsetData.map(({ qty, name }) => `**${qty}** ${name}`).join('\n'),
+            inline: type == 'Land' || type == 'Sideboard' ? true : false
+          });
+          break;
+        default:
+          array = [...array, ...subsetData];
+          break;
+      }
     }
   });
-  return fields;
+  return array;
 };
+
+/**
+ * Fills rectangle with rounded corners.
+ */
+export const roundRect = (context, x, y, w, h, r) => {
+  if (w < 2 * r) r = w / 2;
+  if (h < 2 * r) r = h / 2;
+  context.beginPath();
+  context.moveTo(x+r, y);
+  context.arcTo(x+w, y,   x+w, y+h, r);
+  context.arcTo(x+w, y+h, x,   y+h, r);
+  context.arcTo(x,   y+h, x,   y,   r);
+  context.arcTo(x,   y,   x+w, y,   r);
+  context.closePath();
+  context.fillStyle = '#1E1E1E';
+  context.fill();
+}
+
+/**
+ * Draw visual decklist.
+ */
+export const drawDeck = async (decklist) => {
+  const mainboardArray = decklist.filter(card => !(card.display_type == 'Companion' || card.display_type == 'Sideboard'));
+  const sideboardArray = decklist.filter(card => (card.display_type == 'Companion' || card.display_type == 'Sideboard'));
+
+  const numCols = mainboardArray.length >= 7 ? 7 : mainboardArray.length;
+  const numRows = Math.ceil(mainboardArray.length / 7);
+
+  const width = (
+    // Horizontal padding
+    (50 * 2) +
+    // Total width of cards
+    ((numCols + Math.ceil(sideboardArray.length / numRows)) * 223) +
+    // Total gutter between cards
+    (((numCols - 1) + (sideboardArray.length ? (Math.ceil(sideboardArray.length / numRows) - 1) : 0)) * 20)
+    // Gutter between mainboard and sideboard
+    + (sideboardArray.length ? 100 : 0)
+  );
+
+  const height = (
+    // Vertical padding
+    (50 * 2) +
+    // Total height of cards
+    (numRows * 311) +
+    // Total gutter between cards
+    ((numRows - 1) * 25)
+  );
+
+  const canvas = createCanvas(width, height);
+  const context = canvas.getContext('2d', { alpha: false });
+
+  // Background
+  context.fillStyle = '#2F3136';
+  context.fillRect(0, 0, width, height);
+
+  // Draw mainboard and sideboard image grid with qty labels
+  await Promise.all(
+    [...mainboardArray, ...sideboardArray].map( async (card, i) => {
+      const _i = (i > mainboardArray.length - 1) ? i - mainboardArray.length : i;
+      const _numCols = (i > mainboardArray.length - 1) ? Math.ceil(sideboardArray.length / numRows) : 7;
+      const _mainboardWidth = (numCols * 223) + ((numCols - 1) * 20);
+
+      const cardImage = await loadImage(card.image);
+      let x_offset = 50 + ((_i % _numCols) * 223) + (((_i % _numCols) > 0) ? ((_i % _numCols) * 20) : (0));
+      const y_offset = 50 + (Math.floor(_i / _numCols) * 331) + 5; // (Math.floor(i / 7) * 25);
+      if (i > mainboardArray.length - 1) x_offset += 100 + _mainboardWidth;
+      context.drawImage(cardImage, x_offset, y_offset, 223, 311);
+
+      const font_offset = 5 + (`×${card.qty}`.length > 2 ? (`×${card.qty}`.length - 2) * 17 : 0);
+      roundRect(context, x_offset + 150 - font_offset, y_offset + 41, 50 + font_offset, 50, 8);
+      context.fillStyle = '#FFFFFF';
+      context.font = 'bold 25px Verdana';
+      context.fillText(`×${card.qty}`, x_offset + 156 - font_offset, y_offset + 74);
+    })
+  );
+  
+  const buffer = canvas.toBuffer('image/png');
+  return buffer;
+}
 
 /**
  * Formats bracketed mana symbols into Discord emojis

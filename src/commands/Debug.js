@@ -1,13 +1,13 @@
-// import chalk from 'chalk';
+import chalk from 'chalk';
 
 const Debug = {
     name: 'debug',
     description: "Displays the bot's current uptime, cluster info, and latency.",
     type: 'guild',
-    execute({ ws, uptime, interaction }) {
+    execute({ client, interaction }) {
       try {
         // Get uptime in nearest days, hours, minutes and seconds
-        let totalSeconds = uptime / 1000;
+        let totalSeconds = client.uptime / 1000;
         let days = Math.floor(totalSeconds / 86400).toFixed(0);
         let hours = Math.floor(totalSeconds / 3600).toFixed(0);
   
@@ -45,7 +45,7 @@ const Debug = {
             // Latency between Discord bot and user
             { name: 'Bot Latency', value: `\`${ Date.now() - interaction_timestamp } ms\``, inline: true },
             // Latency between Discord bot and Discord API
-            { name: 'API Latency', value: `\`${ Math.round(ws.ping) } ms\``, inline: true },
+            { name: 'API Latency', value: `\`${ Math.round(client.ws.ping) } ms\``, inline: true },
           ],
         };
       } catch (error) {

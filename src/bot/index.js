@@ -6,6 +6,15 @@ import { validateCommand } from 'utils/discord';
 import { CLIENT_INTENTS } from 'constants';
 import config from 'config';
 
+// List of which commands were registered for the respective command types.
+let globalCommands = [];
+let guildCommands = [];
+
+// Count of commands that were patched, posted, or deleted.
+let updatedCommands = 0;
+let registeredCommands = 0;
+let removedCommands = 0;
+
 /**
  * An extended `Client` to support slash-command interactions and events.
  */
@@ -47,11 +56,23 @@ class Bot extends Client {
 
     try {
       const files = readdirSync(resolve(__dirname, '../commands'));
+      let hiddenCommands = [];
 
       for (const file of files) {
         const command = require(resolve(__dirname, '../commands', file)).default;
+        if (command?.type !== 'hidden') {
+          // Register command
+          this.commands.set(command.name, command);
+          // Add command to global commands list
+          if (command?.type === 'global') globalCommands.push(command.name);
+          // Add command to guild Commands list
+          else if (config.guild) guildCommands.push(command.name);
+        // Hide command
+        } else hiddenCommands.push(command.name);
+      }
 
-        this.commands.set(command.name, command);
+      if (hiddenCommands.length > 0) {
+        console.info(`${chalk.cyanBright('[Bot]')} ${hiddenCommands.length} commands hidden`);
       }
 
       console.info(`${chalk.cyanBright('[Bot]')} ${files.length} commands loaded`);
@@ -63,58 +84,86 @@ class Bot extends Client {
   }
 
   /**
-   * Loads and registers interactions with Discord remote
+   * Loads and registers slash command interactions with Discord remote
    */
   async loadInteractions() {
-    try {
-      // Get remote target
-      const remote = () =>
-        config.guild
-          ? this.api.applications(this.user.id).guilds(config.guild)
-          : this.api.applications(this.user.id);
+    console.info(`${chalk.cyanBright('[Bot]')} Updating slash commands...`);
+    // Get remote targets
+    const globalRemote = () => this.api.applications(this.user.id);
+    const guildRemote = () =>
+      config.guild
+        ? this.api.applications(this.user.id).guilds(config.guild)
+        : undefined;
 
-      // Get remote cache
-      const cache = await remote().commands.get();
+    // Get remote cache
+    const globalCache = await globalRemote().commands.get();
+    const guildCache = await guildRemote().commands.get();
 
-      // Update remote
-      await Promise.all(
-        this.commands.map(async command => {
-          // Validate command props
-          const data = validateCommand(command);
+    // Update remote
+    await Promise.all(
+      this.commands.map(async command => {
+        // Validate command props
+        const data = validateCommand(command);
 
-          // Check for cache
-          const cached = cache?.find(({ name }) => name === command.name);
-
-          // Create if no remote
-          if (!cached?.id) return await remote().commands.post({ data });
-
-          // Check if updated
-          const needsUpdate =
-            data.title !== cached.title ||
-            data.description !== cached.description ||
-            data.options?.length !== cached.options?.length ||
-            data.options?.some(
-              (option, index) =>
-                JSON.stringify(option) !== JSON.stringify(cached.options[index])
-            );
-          if (needsUpdate) return await remote().commands(cached.id).patch({ data });
-        })
-      );
-
-      // Cleanup cache
-      await Promise.all(
-        cache.map(async command => {
-          const exists = this.commands.get(command.name);
-
-          if (!exists) {
-            await remote().commands(command.id).delete();
+        if (globalCommands.includes(command.name)) {
+          const globalCached = globalCache?.find(({ name }) => name === command.name);
+          if (globalCached?.id) {
+            if(globalCached?.name !== validateCommand(command)?.name || globalCached?.description !== validateCommand(command)?.description || JSON.stringify(globalCached?.options) !== JSON.stringify(validateCommand(command)?.options)) {
+              updatedCommands++;
+              await globalRemote().commands(globalCached.id).patch({ data });
+            }
+          } else {
+            registeredCommands++;
+            await globalRemote().commands.post({ data });
           }
-        })
-      );
+        } else if (config.guild) {
+          const guildCached = guildCache?.find(({ name }) => name === command.name);
+          if (guildCached?.id) {
+            if(guildCached?.name !== validateCommand(command)?.name || guildCached?.description !== validateCommand(command)?.description || JSON.stringify(guildCached?.options) !== JSON.stringify(validateCommand(command)?.options)) {
+              updatedCommands++;
+              await guildRemote().commands(guildCached.id).patch({ data });
+            }
+          } else {
+            registeredCommands++;
+            await guildRemote().commands.post({ data });
+          }
+        }
+      })
+    );
 
-      console.info(`${chalk.cyanBright('[Bot]')} Loaded interactions`);
-    } catch (error) {
-      console.error(chalk.white(`${chalk.red(`[bot/index#loadInteractions]`)}\n>> ${chalk.red(error.stack)}`));
+    // Purge removed global commands
+    if (globalCache) await Promise.all(
+      globalCache.map(async command => {
+        const exists = this.commands.get(command.name);
+        if (!exists || !globalCommands.includes(command.name)) {
+          removedCommands++;
+          await globalRemote().commands(command.id).delete();
+        }
+      })
+    );
+
+    // Purge removed guild commands
+    if (guildCache) await Promise.all(
+      guildCache.map(async command => {
+        const exists = this.commands.get(command.name);
+        if (!exists || !guildCommands.includes(command.name)) {
+          removedCommands++;
+          await guildRemote().commands(command.id).delete();
+        }
+      })
+    );
+
+    if (updatedCommands > 0) {
+      console.info(`${chalk.cyanBright('[Bot]')} ${updatedCommands} ${updatedCommands == 1 ? 'command' : 'commands'} updated`);
+    }
+    if (registeredCommands > 0) {
+      console.info(`${chalk.cyanBright('[Bot]')} ${registeredCommands} ${registeredCommands == 1 ? 'command' : 'commands'} registered`);
+    }
+    if (removedCommands > 0) {
+      console.info(`${chalk.cyanBright('[Bot]')} ${removedCommands} ${removedCommands == 1 ? 'command' : 'commands'} removed`);
+    }
+    if (updatedCommands + registeredCommands + removedCommands === 0) {
+      console.info(`${chalk.cyanBright('[Bot]')} No commands changed`);
     }
   }
 

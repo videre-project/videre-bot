@@ -34,7 +34,7 @@ const MessageEvent = {
 
       return registerComponents(client, message.id, data.components);
     } catch (error) {
-      console.error(chalk.white(`${chalk.red(`[events/message]`)}\n>> ${chalk.red(error.stack)}`));
+      console.error(chalk.white(`${chalk.yellow(`[events/message]`)}\n>> ${chalk.red(error.stack)}`));
     }
   },
 };

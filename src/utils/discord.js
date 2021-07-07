@@ -8,9 +8,10 @@ import {
   MESSAGE_COMPONENT_STYLES,
   INTERACTION_RESPONSE_FLAGS,
   COMMAND_OPTION_TYPES,
+  MTGO,
 } from 'constants';
-import { APIMessage } from 'discord.js';
-import { formatDeck } from 'utils/magic';
+import { APIMessage, MessageAttachment } from 'discord.js';
+import { formatDeck, drawDeck, manamoji } from 'utils/magic';
 
 // Shared sanitation context
 const { window } = new JSDOM('');
@@ -137,7 +138,7 @@ export const validateCommand = ({ name, description, options }) => ({
   name,
   description,
   options: options?.map(({ type, ...rest }) => ({
-    type: COMMAND_OPTION_TYPES[snakeCase(type)],
+    type: isNaN(type) ? COMMAND_OPTION_TYPES[snakeCase(type)] : type,
     ...rest,
   })),
 });
@@ -157,7 +158,7 @@ export const validateCommand = ({ name, description, options }) => ({
         if (output[pageIndex]) output[pageIndex] += line;
         else output[pageIndex] = message?.description ? `${message.description}${line}` : line;
       } 
-      else if ((mode == 'fields' || 'decklist' || 'visual-decklist') && typeof(items[0]) == 'object') {
+      else if ((mode == 'fields' || mode == 'decklist' || mode == 'visual_decklist') && typeof(items[0]) == 'object') {
         if (output[pageIndex]) output[pageIndex].push(item);
         else output[pageIndex] = [item];
       }
@@ -171,7 +172,7 @@ export const validateCommand = ({ name, description, options }) => ({
 
   // Return a message with updated props
   const updateMessage = async () => {
-    if (mode == 'decklist' || 'visual-decklist' && length == 1) {
+    if (mode == 'decklist' || mode == 'visual_decklist' && length == 1) {
       if (pages[page][0]?.deck && pages[page][0]?.emojiGuild) {
         const collection = await fetch("https://api.scryfall.com/cards/collection", {
           method: "post",
@@ -183,11 +184,42 @@ export const validateCommand = ({ name, description, options }) => ({
             ],
           }),
         }).then(res => res.json())
+        
+        // Get unique colors for each card (and card face)
+        const data = collection.data.map(({ image_uris, colors, card_faces }, i) => 
+          image_uris ? (!colors.length ? [ 'C' ] : colors) : [
+            ...(!card_faces[0].colors.length) ? [ 'C' ] : card_faces[0].colors,
+            ...(!card_faces[1].colors.length) ? [ 'C' ] : card_faces[1].colors
+          ]
+          // Remove duplicate colors
+          .filter((item, pos, self) => self.indexOf(item) == pos)
+        // Flatten nested arrays of colors from each card into a single array
+        ).flat(1);
+
+        // Only keep colors that occur more than once
+        let colorsArray = [...new Set(
+          data.filter(function(item, pos) {
+            return data.indexOf(item) !== data.lastIndexOf(item);
+          }).flat(1)
+        )];
+        // Remove colorless symbol from array if other colors are present
+        if (colorsArray.includes('C') && colorsArray.length > 1) colorsArray = colorsArray.filter(item => item !== 'C')
+        // Sort mana by positional indexes for sorting in WUBRG order and format as {W}{U}{B}{R}{G}
+        colorsArray = colorsArray.map(c => MTGO.COLORS.indexOf(c)).sort();
+        const colors = manamoji(pages[page][0]?.emojiGuild, `{${colorsArray.map(i => MTGO.COLORS[i]).join('}{')}}`);
+
+        // Add deck colors and handle missing archetype names
+        pages[page][0].title = pages[page][0].title
+          .replace('\n', `\n${colors} `)
+          .replace('**undefined**', `**Unknown**`);
+        
+        const decklist = formatDeck(collection.data, pages[page][0].deck, pages[page][0]?.emojiGuild, mode);
         if (mode == 'decklist') {
-          const decklist = formatDeck(collection.data, pages[page][0].deck, pages[page][0]?.emojiGuild);
           pages[page][0].fields = pages[page][0]?.fields ? [...pages[page][0].fields, ...decklist] : decklist;
-        } else if (mode == 'visual-decklist') {
-          //
+        } else if (mode == 'visual_decklist') {
+          const buffer = await drawDeck(decklist);
+          pages[page][0].image = { url: 'attachment://canvas.png' };
+          pages[page][0].files = [new MessageAttachment(buffer, 'canvas.png')];
         }
         if (pages[page][0]?.deck) delete pages[page][0].deck;
         if (pages[page][0]?.emojiGuild) delete pages[page][0].emojiGuild;

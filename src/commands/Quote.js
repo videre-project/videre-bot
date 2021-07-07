@@ -12,12 +12,12 @@ const Quote = {
             required: true,
         },
     ],
-    async execute({ channels, args }) {
+    async execute({ client, args }) {
         const message_link = args?.message_link;
         try {
             const [guildID, channelID, messageID] = message_link.split('discord.com/channels/')[1].split('/');
 
-            const channel = await channels.fetch(channelID);
+            const channel = await client.channels.fetch(channelID);
             const message = await channel.messages.fetch(messageID);
 
             const avatarURL = `https://cdn.discordapp.com/avatars/${message.author.id}/${message.author.avatar}.webp?size=128`;
