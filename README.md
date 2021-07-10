@@ -62,9 +62,26 @@ yarn test
 
 Command | Options | Description
 --- | --- | ---
+   /catalog | `format` `event_type` `date` | (WIP) Displays most recent events by format, type, and/or date.
+   /debug | | Displays the bot's current uptime, cluster info, and latency.
+   /decklist | `decklist_url` | (WIP) Display decklist(s) by url or filtered by format, archetype, player, and/or query.
    /event | `event_id` `view (optional)` | (WIP) Displays an event by name, id, date, or search query.
    /help | *none* | Displays this bot's commands.
+   /hypergeo | `pop_size` `pop_successes` `sample_size` `desired_successes` | Solves a hypergeometric distribution.
+   /quote | `message_link` | Quotes a message by a provided message link.
 
+## /catalog
+(WIP) Displays most recent events by format, type, and/or date.
+
+Usage: `/catalog format: modern event_type: challenge date: 07/04/2021`
+## /debug
+Displays the bot's current uptime, cluster info, and latency.
+
+Usage: `/debug`
+## /decklist
+(WIP) Display decklist(s) by url or filtered by format, archetype, player, and/or query.
+
+Usage: `/decklist decklist_url: https://www.mtggoldfish.com/deck/432172#paper`
 ## /event
 (WIP) Displays an event by name, id, date, or search query.
 
@@ -73,3 +90,11 @@ Usage: `/event event_id: 12299475 view: Decklist View`
 Displays a list of this bot's commands.
 
 Usage: `/help`
+## /hypergeo
+Solves a hypergeometric distribution.
+
+Usage: `/hypergeo pop_size: 60 pop_successes: 24 sample_size: 7 desired_successes: 4`
+## /quote
+Quotes a message by a provided message link.
+
+Usage: `/quote message_link:https://discord.com/channels/772093785176801310/810281825691107389/863256006887473162`
