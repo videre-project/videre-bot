@@ -172,6 +172,9 @@ class Bot extends Client {
    */
   async start() {
     try {
+      // Hide experimental warnings
+      process.env.NODE_NO_WARNINGS = 1;
+
       this.loadEvents();
       this.loadCommands();
 

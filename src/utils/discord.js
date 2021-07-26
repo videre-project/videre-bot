@@ -11,7 +11,7 @@ import {
   MTGO,
 } from 'constants';
 import { APIMessage, MessageAttachment } from 'discord.js';
-import { formatDeck, drawDeck, manamoji } from 'utils/magic';
+import { getColors, formatDeck, drawDeck } from 'utils/magic';
 
 // Shared sanitation context
 const { window } = new JSDOM('');
@@ -143,10 +143,49 @@ export const validateCommand = ({ name, description, options }) => ({
   })),
 });
 
+export const formatMonospaceTable = (array, length, indexLabel) => {
+  let pages = [];
+  if (indexLabel) array = array.map((obj, i) => ({'#': i + 1, ...obj}));
+  for (let i = 0; i < Math.ceil(array.length / length); i++) {
+      const _array = array.slice(i * length, (i + 1) * length);
+      const getColLength = (col) => [
+          '===', col, ..._array.map(obj => obj[col].toString())
+      ].sort((a, b) => (a.toString().length < b.toString().length) ? 1 : -1)[0].length;
+
+      let table = new Array(4 + length).fill('');
+      Object.keys(array[0]).forEach(key => {
+          const divider = new Array(getColLength(key) + 1).join("=");
+          const title = [
+              key.charAt(0).toUpperCase() + key.slice(1),
+              new Array(getColLength(key) + 1 - key.toString().length).join(" ")
+          ].sort((a, b) => (
+              typeof(_array[0][key]) === 'string' &&
+              isNaN(_array[0][key]) &&
+              !/^\d+(\.\d+)?%$/.test(_array[0][key])
+          ) ? 1 : -1).join('');
+          [
+              divider, title, divider,
+              ..._array.map(obj => [obj[key],
+                  new Array(getColLength(key) + 1 - obj[key].toString().length).join(' ')
+                  ].sort((a, b) => (
+                      typeof(_array[0][key]) === 'string' &&
+                      isNaN(_array[0][key]) &&
+                      !/^\d+(\.\d+)?%$/.test(_array[0][key])
+                  ) ? 1 : -1).join('')
+              ), divider
+          ].forEach((row,i) => {
+              table[i] = table?.[i] ? table?.[i] + '  ' + row : row
+          });
+      });
+      pages.push(table);
+  }
+  return pages;
+}
+
 /**
  * Formats an array of items/embed properties/embeds or decklist into an embed with navigable pages.
  */
- export const formatListAsPages = async (items, message, page = 0, length = 10, mode) => {
+export const formatListAsPages = async (items, message, page = 0, length = 10, mode) => {
   // Deal with inconsistent handling of object arrays
   if (!Array.isArray(items) && length > 1) items = [items];
   // Format items into pages of 'length'
@@ -185,52 +224,24 @@ export const validateCommand = ({ name, description, options }) => ({
           }),
         }).then(res => res.json())
         
-        // Get unique colors for each card (and card face)
-        const data = collection.data.map(({ image_uris, colors, card_faces }, i) => 
-          image_uris ? (!colors.length ? [ 'C' ] : colors) : [
-            ...(!card_faces[0].colors.length) ? [ 'C' ] : card_faces[0].colors,
-            ...(!card_faces[1].colors.length) ? [ 'C' ] : card_faces[1].colors
-          ]
-          // Remove duplicate colors
-          .filter((item, pos, self) => self.indexOf(item) == pos)
-        // Flatten nested arrays of colors from each card into a single array
-        ).flat(1);
-
-        // Only keep colors that occur more than once
-        let colorsArray = [...new Set(
-          data.filter(function(item, pos) {
-            return data.indexOf(item) !== data.lastIndexOf(item);
-          }).flat(1)
-        )];
-        // Remove colorless symbol from array if other colors are present
-        if (colorsArray.includes('C') && colorsArray.length > 1) colorsArray = colorsArray.filter(item => item !== 'C')
-        // Sort mana by positional indexes for sorting in WUBRG order and format as {W}{U}{B}{R}{G}
-        colorsArray = colorsArray.map(c => MTGO.COLORS.indexOf(c)).sort();
-        const colors = manamoji(pages[page][0]?.emojiGuild, `{${colorsArray.map(i => MTGO.COLORS[i]).join('}{')}}`);
-
         // Add deck colors and handle missing archetype names
+        const colors = getColors(collection.data, pages[page][0]?.emojiGuild);
         pages[page][0].title = pages[page][0].title
-          .replace('\n', `\n${colors} `)
-          .replace('**undefined**', `**Unknown**`);
+          .replace('{COLORS}', `${colors}`)
+          .replaceAll('**undefined**', `**Unknown**`);
         
         const decklist = formatDeck(collection.data, pages[page][0].deck, pages[page][0]?.emojiGuild, mode);
+        
         if (mode == 'decklist') {
           pages[page][0].fields = pages[page][0]?.fields ? [...pages[page][0].fields, ...decklist] : decklist;
-        } else if (mode == 'visual_decklist') {
+        }
+        else if (mode == 'visual_decklist') {
           const buffer = await drawDeck(decklist);
           pages[page][0].image = { url: 'attachment://canvas.png' };
           pages[page][0].files = [new MessageAttachment(buffer, 'canvas.png')];
         }
         if (pages[page][0]?.deck) delete pages[page][0].deck;
         if (pages[page][0]?.emojiGuild) delete pages[page][0].emojiGuild;
-      } else if (!pages[page][0]?.fields) {
-        throw new Error([
-          'No ',
-          !pages[page][0]?.deck ? 'deck object' : '',
-          !pages[page][0]?.deck && !pages[page][0]?.emojiGuild ? ' or ' : '',
-          !pages[page][0]?.emojiGuild ? 'emojiGuild' : '',
-          ' found.'
-        ].join(''));
       }
     }
     else if (mode) message[mode] = pages[page];

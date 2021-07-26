@@ -1,5 +1,5 @@
 import { MTGO } from 'constants';
-import { createCanvas, loadImage } from 'canvas';
+import { createCanvas, loadImage} from 'canvas';
 import { groupBy, dynamicSortMultiple } from 'utils/database';
 
 /**
@@ -9,6 +9,39 @@ import { groupBy, dynamicSortMultiple } from 'utils/database';
   let s = ["th", "st", "nd", "rd"],
       v = n % 100;
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+/**
+ * Gets unique colors in a scryfall collection.
+ */
+export const getColors = (collection, emojiGuild) => {
+  // Get unique colors for each card (or each card face)
+  const data = collection.map(({ name, image_uris, colors, card_faces }, i) => {
+    // Exclude companion colors
+    if (MTGO.COMPANIONS.includes(name)) return [ 'C' ];
+    return image_uris ? (!colors.length ? [ 'C' ] : colors) : [
+    ...(!card_faces[0].colors.length) ? [ 'C' ] : card_faces[0].colors,
+    ...(!card_faces[1].colors.length) ? [ 'C' ] : card_faces[1].colors
+    ].filter((item, pos, self) => self.indexOf(item) == pos)
+  }).flat(1);
+
+  // Remove duplicates from set
+  let colorsArray = [...new Set(
+      data.filter(function(item, pos) {
+      return data;
+      // Only keep colors that occur more than once
+      // return data.indexOf(item) !== data.lastIndexOf(item);
+      }).flat(1)
+  )];
+
+  // Remove colorless symbol from array if other colors are present
+  if (colorsArray.includes('C') && colorsArray.length > 1) colorsArray = colorsArray.filter(item => item !== 'C')
+
+  // Sort mana by positional indexes for sorting in WUBRG order and format as {W}{U}{B}{R}{G}
+  colorsArray = colorsArray.map(c => MTGO.COLORS.indexOf(c)).sort();
+  const colors = manamoji(emojiGuild, `{${colorsArray.map(i => MTGO.COLORS[i]).join('}{')}}`);
+
+  return colors;
 }
 
 /**
@@ -39,7 +72,7 @@ import { groupBy, dynamicSortMultiple } from 'utils/database';
 };
 
 /**
- * Formats Scryfall collection and deck object into embed fields.
+ * Formats Scryfall collection and decklist object into sorted array / embed fields.
  */
 export const formatDeck = function(json, deck, emojiGuild, mode) {
   const data = json.map(({ name, color_identity, cmc, image_uris, colors, type_line, mana_cost, card_faces, layout }, i) => {
@@ -103,7 +136,10 @@ export const formatDeck = function(json, deck, emojiGuild, mode) {
             ...rest
           };
         })
+        // Sorting Method 1
         .sort(dynamicSortMultiple('cmc', 'colors', '-qty', 'color_identity', 'name'))
+        // Scryfall Sorting Method
+        // .sort(dynamicSortMultiple('cmc', 'name'))
         .map(({ colors, color_identity, ...rest }) => {
           return {
             colors: `{${colors.map(i => MTGO.COLORS[i]).join('}{')}}`,
@@ -132,24 +168,10 @@ export const formatDeck = function(json, deck, emojiGuild, mode) {
 };
 
 /**
- * Fills rectangle with rounded corners.
- */
-export const roundRect = (context, x, y, w, h, r) => {
-  if (w < 2 * r) r = w / 2;
-  if (h < 2 * r) r = h / 2;
-  context.beginPath();
-  context.moveTo(x+r, y);
-  context.arcTo(x+w, y,   x+w, y+h, r);
-  context.arcTo(x+w, y+h, x,   y+h, r);
-  context.arcTo(x,   y+h, x,   y,   r);
-  context.arcTo(x,   y,   x+w, y,   r);
-  context.closePath();
-  context.fillStyle = '#1E1E1E';
-  context.fill();
-}
-
-/**
- * Draw visual decklist.
+ * Draw visual decklist from decklist object.
+ * 
+ * @example drawdeck({ mainboard: [{ qty: 4, name: "Island", image: "https://c1.scryfall...", ... }, ...], sideboard: [...] })
+ * 
  */
 export const drawDeck = async (decklist) => {
   const mainboardArray = decklist.filter(card => !(card.display_type == 'Companion' || card.display_type == 'Sideboard'));
@@ -181,9 +203,28 @@ export const drawDeck = async (decklist) => {
   const canvas = createCanvas(width, height);
   const context = canvas.getContext('2d', { alpha: false });
 
+  // Speed optimizations
+  context.quality = 'fast';
+  context.textDrawingMode = 'glyph';
+
   // Background
-  context.fillStyle = '#2F3136';
+  context.fillStyle = '#292B2F';//'#2F3136';
   context.fillRect(0, 0, width, height);
+
+  // Fills rectangle with rounded corners.
+  const roundRect = (context, x, y, w, h, r) => {
+    if (w < 2 * r) r = w / 2;
+    if (h < 2 * r) r = h / 2;
+    context.beginPath();
+    context.moveTo(x+r, y);
+    context.arcTo(x+w, y,   x+w, y+h, r);
+    context.arcTo(x+w, y+h, x,   y+h, r);
+    context.arcTo(x,   y+h, x,   y,   r);
+    context.arcTo(x,   y,   x+w, y,   r);
+    context.closePath();
+    context.fillStyle = '#1E1E1E';
+    context.fill();
+  }
 
   // Draw mainboard and sideboard image grid with qty labels
   await Promise.all(
@@ -192,11 +233,16 @@ export const drawDeck = async (decklist) => {
       const _numCols = (i > mainboardArray.length - 1) ? Math.ceil(sideboardArray.length / numRows) : 7;
       const _mainboardWidth = (numCols * 223) + ((numCols - 1) * 20);
 
-      const cardImage = await loadImage(card.image);
       let x_offset = 50 + ((_i % _numCols) * 223) + (((_i % _numCols) > 0) ? ((_i % _numCols) * 20) : (0));
       const y_offset = 50 + (Math.floor(_i / _numCols) * 331) + 5; // (Math.floor(i / 7) * 25);
       if (i > mainboardArray.length - 1) x_offset += 100 + _mainboardWidth;
+
+      const cardImage = await loadImage(card.image);
       context.drawImage(cardImage, x_offset, y_offset, 223, 311);
+      if (card.display_type == 'Companion') {
+        const _cardImage = await loadImage('./public/Companion_Frame.png');
+        context.drawImage(_cardImage, x_offset, y_offset, 223, 311);
+      }
 
       const font_offset = 5 + (`×${card.qty}`.length > 2 ? (`×${card.qty}`.length - 2) * 17 : 0);
       roundRect(context, x_offset + 150 - font_offset, y_offset + 41, 50 + font_offset, 50, 8);
@@ -207,6 +253,26 @@ export const drawDeck = async (decklist) => {
   );
   
   const buffer = canvas.toBuffer('image/png');
+
+  const max_dim = 1080 * 2;
+  if (width > max_dim || height > max_dim) {
+    const _width = width > max_dim ? max_dim : width / (height / max_dim);
+    let _height = height > max_dim ? max_dim : height / (width / max_dim);
+    if (width > max_dim && height > max_dim) _height = height / (width / max_dim);
+
+    const _canvas = createCanvas(_width, _height);
+    const _context = _canvas.getContext('2d', { alpha: false });
+
+    // Background
+    _context.fillStyle = '#2F3136';
+    _context.fillRect(0, 0, _width, _height);
+
+    const image = await loadImage(buffer);
+    _context.drawImage(image, 0, 0, _width, _height);
+
+    return _canvas.toBuffer('image/png');
+  }
+
   return buffer;
 }
 

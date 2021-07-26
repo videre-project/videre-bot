@@ -11,6 +11,7 @@ const RawEvent = {
   async execute(client, packet) {
     try {
       if (packet.t !== 'INTERACTION_CREATE') return;
+      const time_1 = new Date().getTime();
 
       const interaction = packet.d;
       const { type } = interaction;
@@ -31,17 +32,9 @@ const RawEvent = {
           const output = await command.execute({ client, interaction, args });
           if (!output) return;
           if (output?.deferred == true) {
+            // Send follow-up response through `WebhookClient`
             const data = validateMessage(output.data);
             await new WebhookClient(client.user.id, interaction.token).send(data);
-            // await client.api.webhooks(client.user.id, interaction.token)
-            //   .messages('@original').patch({
-            //     data: {
-            //       // type: INTERACTION_RESPONSE_TYPE.DEFERRED_UPDATE_MESSAGE,//CHANNEL_MESSAGE_WITH_SOURCE,
-            //       data,
-            //     },
-            //   });
-            
-            // Send follow-up response through `WebhookClient`
             if (!data.components) return;
             await new WebhookClient(client.user.id, interaction.token).send(validateMessage({
               ...ERROR_DEFAULTS,
@@ -49,6 +42,9 @@ const RawEvent = {
             }));
             return;
           }
+
+          const time_2 = ((2 * client.ws.ping) + new Date().getTime() - time_1);
+          if (time_2 > 3000) return;
 
           const data = validateMessage(output);
           await client.api.interactions(interaction.id, interaction.token).callback.post({
@@ -75,6 +71,9 @@ const RawEvent = {
 
           const output = await callback(interaction);
           if (!output) return;
+
+          const time_2 = ((2 * client.ws.ping) + new Date().getTime() - time_1);
+          if (time_2 > 3000) return;
 
           const data = validateMessage(output);
           return client.api
