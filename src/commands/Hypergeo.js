@@ -1,4 +1,3 @@
-// import chalk from 'chalk';
 import { formatListAsPages } from 'utils/discord';
 
 const Hypergeo = {
@@ -30,7 +29,7 @@ const Hypergeo = {
   execute({ args }) {
     try {
       // Calculates the greatest common denominator between two numbers
-      function gcd(givenNumber1, givenNumber2) {
+      const gcd = (givenNumber1, givenNumber2) => {
         let greatestCommonDenominator = 1; // Any two numbers' minimum gcd is 1
 
         for (let i = 1; i <= givenNumber1 && i <= givenNumber2; i++) {
@@ -42,20 +41,7 @@ const Hypergeo = {
         return greatestCommonDenominator;
       }
 
-      /*
-       * Calculates a combination of n and r
-       * The equation for nCr is (n!) / ((r!) * (n - r)!)
-       * This can be simplified to n * (n - 1) * (n - 2) * ... * (n - r + 1) / r!
-       * This method calculates nCr using this simplified equation
-       * Within a Deck object, n = sampleSize and r = desiredSuccesses
-       */
-      function ncr(n, r) {
-        /*
-         * The combination of n and r is equal to the combination of n and (n - r)
-         * For example, 17 combination 13 is the same as 17 combination 4
-         * Therefore, we can substitute (n - r) for r if we have a larger r value
-         * Attempting to prevent overflow, if (n - r) is less than r we use it instead
-         */
+      const ncr = (n, r) => {
         if (n - r < r) r = n - r;
 
         // Tries to calculate the combination of n and r
@@ -64,13 +50,6 @@ const Hypergeo = {
           let bottom = 1; // bottom holds the value of r * (r - 1) * (r - 2) ...
 
           if (r) {
-            /*
-             * Because this only loops until r = 0, we only calculate the first r numbers of the factorial
-             * This is equivalent to the n * (n - 1) * (n - 2) * ... * (n - r + 1)
-             * In other words, it is a reduced factorial of n from n to n - r + 1
-             * This is how we calculate nCr with the simplified equation
-             * The top is n * (n - 1) * (n - 2) * ... * (n - r + 1) and the bottom is r!
-             */
             while (r) {
               top *= n;
               bottom *= r;
@@ -87,14 +66,8 @@ const Hypergeo = {
           }
           else top = 1; // n combination 0, where n is any number, is always equal to 1
 
-          /*
-           * A factorial always simplifies to a whole number
-           * Therefore, we can just return the top, because using the gcd division, bottom should simplify to 1
-           * In the case where r = 0, we simply store 1 in top because n combination 0 is always 1
-           */
           return top;
         }
-        // There was a divide-by-zero error
         catch(err) {
           return 1; // Returns a default value of 1
         }
@@ -110,10 +83,10 @@ const Hypergeo = {
             && popSize >= 0 && popSuccesses >= 0 && sampleSize >= 0 && desiredSuccesses >= 0
           ) {
             try {
-              this.popSize = popSize; // The size of the population that is being sampled from
-              this.popSuccesses = popSuccesses; // The number of successes within the population
-              this.sampleSize = sampleSize; // The size of the sample you take from the entire population
-              this.desiredSuccesses = desiredSuccesses; // The amount of successes you are looking for from your sample
+              this.popSize = popSize;
+              this.popSuccesses = popSuccesses;
+              this.sampleSize = sampleSize;
+              this.desiredSuccesses = desiredSuccesses;
               this.popFailures = popSize - popSuccesses;
 
               this.exactChance = this.probability(this.desiredSuccesses);
@@ -238,38 +211,7 @@ const Hypergeo = {
         { title: 'Hypergeo', description: `**N =** ${userInputs[0]}, **k =** ${userInputs[1]}, **n =** ${userInputs[2]}, **x =** ${userInputs[3]}` },
         0, 1, 'fields'
       );
-
-      return {
-        title: 'Hypergeo',
-        description: `**N =** ${userInputs[0]}, **k =** ${userInputs[1]}, **n =** ${userInputs[2]}, **x =** ${userInputs[3]}`,
-        fields: [
-          {
-            name: 'Chance of exactly desired successes',
-            value: `**P(X = x):** ${(deck.exact*100).toFixed(2)}%`,
-          },
-          {
-            name: 'Chance of less than desired successes',
-            value: `**P(X < x):** ${((deck.orLessInclusive - deck.exact)*100).toFixed(2)}%`,
-          },
-          {
-            name: 'Chance of desired successes or less',
-            value: `**P(X __<__ x):** ${(deck.orLessInclusive*100).toFixed(2)}%`,
-          },
-          {
-            name: 'Chance of greater than desired successes',
-            value: `**P(X > x):** ${((deck.orGreaterInclusive - deck.exact)*100).toFixed(2)}%`,
-          },
-          {
-            name: 'Chance of desired successes or greater',
-            value: `**P(X __>__ x):** ${((deck.orGreaterInclusive)*100).toFixed(2)}%`
-          },
-        ],
-      };
     } catch (error) {
-      // console.error(
-      //   chalk.cyan(`[/hypergeo]`)+
-      //   chalk.grey('\n>> ') + chalk.red(`Error: ${error.message}`)
-      // );
       return {
         title: 'Error',
         description: error.message,

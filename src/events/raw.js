@@ -24,12 +24,20 @@ const RawEvent = {
           const command = client.commands.get(name);
           if (!command) return;
 
+          // Create object with arg props
           let args = (options && options.length > 0) ? options.reduce((object, { name, value }) => {
             object[name] = value;
             return object;
           }, {}) : {};
-
-          const output = await command.execute({ client, interaction, args });
+          // Format args as url parameters for API
+          const params = Object.keys(args)
+            .map((arg, i) =>
+                typeof(arg) == 'object'
+                    ? arg.map(_arg => Object.keys(args)[i] + '=' + args[_arg])
+                    : Object.keys(args)[i] + '=' + args[arg]
+            ).join('&');
+            
+          const output = await command.execute({ client, interaction, args, params });
           if (!output) return;
           if (output?.deferred == true) {
             // Send follow-up response through `WebhookClient`

@@ -1,5 +1,3 @@
-import chalk from 'chalk';
-
 const Quote = {
     name: 'quote',
     description: "Quotes a message by a provided message link.",
@@ -69,7 +67,6 @@ const Quote = {
             return embed;
 
         } catch (error) {
-            console.error(chalk.cyan(`[/quote]`) + chalk.grey('\n>> ') + chalk.red(`Error: ${error.message}`));
             return {
                 title: 'Error',
                 description: `An error occured while quoting a message.`,

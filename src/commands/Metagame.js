@@ -1,6 +1,9 @@
-import chalk from 'chalk';
+// import chalk from 'chalk';
+import fetch from 'node-fetch';
+
+import config from 'config';
 import { MTGO, ERROR_DEFAULTS } from 'constants';
-import { sql, dynamicSortMultiple } from 'utils/database';
+
 import { formatMonospaceTable, formatListAsPages } from 'utils/discord';
 
 const Metagame = {
@@ -10,79 +13,76 @@ const Metagame = {
     options: [
         {
             name: 'format',
-            description: 'A specific format to return metagame data from',
+            description: 'A specific format to return metagame data from.',
             type: 'string',
+            required: true,
             choices: MTGO.FORMATS,
         },
         {
             name: 'time_interval',
-            description: '(Optional) Amount of days to fetch results from',
+            description: 'Amount of days to fetch results from. (Default 14)',
             type: 'integer',
         },
+        {
+            name: 'offset',
+            description: 'Offset in days to shift `time_interval` or `min_date` / `max_date`.',
+            type: 'integer',
+        },
+        {
+            name: 'min_date',
+            description: 'Minimum date to return results from in `MM/DD/YYYY` or `YYYY/MM/DD` format.',
+            type: 'string',
+        },
+        {
+            name: 'max_date',
+            description: 'Maximum date to return results from in `MM/DD/YYYY` or `YYYY/MM/DD` format.',
+            type: 'string',
+        },
     ],
-    async execute({ args }) {
-        const format = args?.format;
-        const time_interval = args?.time_interval || 2 * 7;
-
-        if (args?.time_interval <= 0) return {
-            ...ERROR_DEFAULTS,
-            description: `Provided \`time_interval\` must be greater than 0.`
-        };
+    async execute({ args, params }) {
         try {
-            const request = await sql`
-                SELECT archetype from results
-                WHERE event >= (
-                    SELECT MIN(uid) FROM events
-                    WHERE date::DATE >= CURRENT_DATE - ${time_interval}::INT
-                ) AND url LIKE '%' || ${'/' + format + '-'}::TEXT || '%'
-                AND archetype::TEXT != '{}'
-                ORDER by event desc;
-            `;
-            if (!request[0]) return {
-                ...ERROR_DEFAULTS,
-                description: `No metagame data was found.`
-            };
-
-            const archetypes = request.map(obj => {
-                const archetype0 = obj.archetype[Object.keys(obj.archetype)[0]];
+            const response = await fetch(config.api + 'metagame?' + params)
+                .then(res => res.json());
+            if (!response?.parameters) {
                 return {
-                    uid: archetype0.uid,
-                    displayName: [...archetype0.alias, archetype0.displayName]
-                        .filter(Boolean)[0],
-                }
-            });
+                    ...ERROR_DEFAULTS,
+                    description: response.details + '\n' +
+                        response?.warnings
+                            ? '```\n' + response.warnings.join('\n') + '\n```'
+                            : ''
+                };
+            }
+            const { format, time_interval } = response.parameters;
+
+            const data = response
+                .data[format.toLowerCase()]
+                .archetypes.data.map(obj => ({
+                    'Meta %': obj.percentage,
+                    'Qty': obj.count,
+                    'Archetype': obj.displayName,
+                }));
             
             return formatListAsPages(
-                formatMonospaceTable(
-                    archetypes.filter((obj, i) =>
-                        archetypes.findIndex(_obj => _obj.uid === obj.uid) === i
-                    ).filter((_obj) => _obj.uid !== null)
-                    .map(obj => ({
-                        'Meta %': (archetypes.filter((_obj) => _obj.uid === obj.uid).length
-                            / archetypes.length * 100).toFixed(2) + '%',
-                        'Qty': archetypes.filter((_obj) => _obj.uid === obj.uid).length,
-                        'Archetype': obj.displayName,
-                    })).sort(dynamicSortMultiple('-Qty', 'Archetype')),
-                    16, true
-                ).map(page => ({
-                    name: [
-                        'Top archetypes in', format.charAt(0).toUpperCase() + format.slice(1),
-                        'in the last', time_interval, time_interval == 1 ? 'day' : 'days'
-                    ].join(' ') + ':',
-                    value: `\`\`\`diff\n${page.join('\n')}\n\`\`\``,
-                })),
+                formatMonospaceTable(data, 16, true)
+                    .map(page => ({
+                        name: [
+                            'Top archetypes in', format.charAt(0).toUpperCase() + format.slice(1),
+                            'in the last', time_interval, time_interval == 1 ? 'day' : 'days'
+                        ].join(' ') + ':',
+                        value: `\`\`\`diff\n${ page.join('\n') }\n\`\`\``,
+                    })),
                 { title: 'Metagame' }, 0, 1, 'fields',
             );
 
         } catch (error) {
-            console.error(
-                chalk.white(
-                    `${chalk.blue(`[/Metagame]`)} args: [ ${[
-                        `${chalk.grey(`format:`)} ${!format ? 'None' : chalk.green(`"${format}"`)}`,
-                        `${chalk.grey(`time_interval:`)} ${!time_interval ? 'None' : chalk.yellow(time_interval)}`,
-                    ].join(', ')} ]\n>> ${chalk.red(error.stack)}`
-                )
-            );
+            // console.error(
+            //     chalk.white(
+            //         `${chalk.blue(`[/Metagame]`)} args: [ ${[
+            //             `${chalk.grey(`format:`)} ${!args?.format ? 'None' : chalk.green(`"${args?.format}"`)}`,
+            //             `${chalk.grey(`time_interval:`)} ${!args?.time_interval ? 'None' : chalk.yellow(args?.time_interval)}`,
+            //         ].join(', ')} ]\n>> ${chalk.red(error.stack)}`
+            //     )
+            // );
             return {
                 title: 'Error',
                 description: `An error occured while fetching metagame data.`,

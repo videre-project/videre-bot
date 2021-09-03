@@ -26,10 +26,12 @@ const Decklist = {
   async execute({ client, interaction, args }) {
     const decklist_url = args?.decklist_url;
 
-    // Initial Deferred Response
-    await client.api.interactions(interaction.id, interaction.token).callback.post({
-        data: { type: INTERACTION_RESPONSE_TYPE.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE },
-    });
+    if (interaction) {
+        // Initial Deferred Response
+        await client.api.interactions(interaction.id, interaction.token).callback.post({
+            data: { type: INTERACTION_RESPONSE_TYPE.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE },
+        });
+    }
 
     try {
         if (!decklist_url) {
@@ -232,13 +234,13 @@ const Decklist = {
 
             // Create decklist object
             decklist = {
-                mainboard: !deck?.length ? [] : deck[0].split('\\r\\n').map(card => (
+                mainboard: !deck?.[0]?.length ? [] : deck[0].split('\\r\\n').map(card => (
                     {
                         quantity: parseInt(card.split(' ')[0].match(/(\d+)/)[0]),
                         cardName: card.substring(card.indexOf(' ') + 1).replace('\\r','')
                     }
                 )),
-                sideboard: !deck?.length ? [] : deck[1].split('\\r\\n').map(card => (
+                sideboard: !deck?.[1]?.length ? [] : deck[1].split('\\r\\n').map(card => (
                     {
                         quantity: parseInt(card.split(' ')[0].match(/(\d+)/)[0]),
                         cardName: card.substring(card.indexOf(' ') + 1).replace('\\r','')
@@ -259,29 +261,35 @@ const Decklist = {
             }),
         }).then(res => res.json())
 
-        // Draw and get visual decklist image
-        const buffer = await drawDeck(
-            formatDeck(
-                collection.data,
-                decklist,
-                client.guilds.resolve(config.emojiGuild)
-            )
-        );
+        let data = {
+            author: author,
+            title: title
+                .replace('{COLORS}', getColors(collection.data, client.guilds.resolve(config.emojiGuild))),
+            url: decklist_url,
+            footer: footer ? footer : {},
+            timestamp: timestamp ? timestamp : undefined,
+        };
+
+        if (!args?.metaOnly) {
+            // Draw and get visual decklist image
+            const buffer = args?.metaOnly ? undefined : await drawDeck(
+                formatDeck(
+                    collection.data,
+                    decklist,
+                    client.guilds.resolve(config.emojiGuild)
+                )
+            );
+            data.image = { url: 'attachment://canvas.png' };
+            data.files = [new MessageAttachment(buffer, 'canvas.png')];
+        }
 
         // Send follow-up response
-        return {
-            deferred: true,
-            data: {
-                author: author,
-                title: title
-                    .replace('{COLORS}', getColors(collection.data, client.guilds.resolve(config.emojiGuild))),
-                url: decklist_url,
-                footer: footer ? footer : {},
-                timestamp: timestamp ? timestamp : undefined,
-                image: { url: 'attachment://canvas.png' },
-                files: [new MessageAttachment(buffer, 'canvas.png')],
-            },
-        };
+        if (interaction) {
+            return {
+                deferred: true,
+                data
+            };
+        } else return data;
 
     } catch (error) {
         console.error(

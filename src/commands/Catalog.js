@@ -1,6 +1,9 @@
-import chalk from 'chalk';
+import fetch from 'node-fetch';
+
+import config from 'config';
 import { ERROR_DEFAULTS, MTGO } from 'constants';
-import { sql, dynamicSortMultiple } from 'utils/database';
+
+import { dynamicSortMultiple } from 'utils/database';
 import { formatListAsPages } from 'utils/discord';
 import { getNumberWithOrdinal } from 'utils/magic';
 
@@ -32,72 +35,58 @@ const Catalog = {
         type: 'integer',
     },
     ],
-    async execute({ client, interaction, args }) {
-        const format = args?.format;
-        const event_type = args?.event_type;
-        const date = args?.date;
-        const time_interval = args?.time_interval;
+    async execute({ params }) {
         try {
-            const request = (!format && !event_type && !date)
-                ? await sql`SELECT * FROM events ORDER by uid desc LIMIT 100;`
-                : await sql.unsafe(`
-                    SELECT * FROM events
-                    WHERE ${[
-                        format ? `format = '${format.charAt(0).toUpperCase() + format.slice(1)}'` : '',
-                        event_type ? `type = '${event_type.charAt(0).toUpperCase() + event_type.slice(1)}'` : '',
-                        time_interval ? `date::DATE >= CURRENT_DATE - ${time_interval}::INT` : (
-                            date ? `date = '${date}'` : ''
-                        ),
-                    ].filter(Boolean).join(' AND ')}
-                    ORDER by uid desc
-                    LIMIT 100
-                ;`);
-            if (!request[0]) return { ...ERROR_DEFAULTS, description: `No events found.` };
-            const minDate = request.map(obj => obj.date)
-                .sort((a, b) => new Date(a) > new Date(b) ? 1 : -1)[0];
-            const range = ((new Date().getTime() - new Date(minDate).getTime()) / (1000 * 3600 * 24))
-                .toFixed(0);
+            const response = await fetch(config.api + 'metagame/events?' + params)
+                .then(res => res.json());
+            if (!response?.parameters) {
+                return {
+                    ...ERROR_DEFAULTS,
+                    description: response.details + '\n' +
+                        response?.warnings
+                            ? '```\n' + response.warnings.join('\n') + '\n```'
+                            : ''
+                };
+            }
+            if (!response?.data) return { ...ERROR_DEFAULTS, description: `No events found.` };
+
+            const time_interval = response.parameters.time_interval;
 
             return formatListAsPages(
-                request
-                .map(obj => ({date: new Date(obj.date), ...obj}))
-                .sort(dynamicSortMultiple('-date', 'uid'))
-                .map(({ uid, uri, date }, i) => (
-                    `**${i + 1}.**${
-                        new Array((request.length).toString().length - (i + 1).toString().length + 1)
+                Object.values(response.data)
+                    .map(obj => obj.events.data).flat(1)
+                    .sort(dynamicSortMultiple('-date', 'uid'))
+                    .map(({ uid, url, date }, i) => (
+                        `**${i + 1}.**${
+                            new Array((
+                                Object.values(response.data)
+                                    .map(obj => obj.events.count)
+                                    .reduce((a, b) => a + b, 0)
+                            ).toString().length - (i + 1).toString().length + 1)
                             .join(" ")
-                    }\`${uid}\` • [**${
-                        uri.toString()
-                            .toLowerCase()
-                            .replace(/[0-9]/g, '')
-                            .split('-')
-                            .map((s) => s.charAt(0).toUpperCase() + s.substring(1))
-                            .join(' ')
-                    } (${
-                        (new Date(date)).toDateString()
-                        .split(' ').map((s, i) => {
-                            if (i == 0) return;
-                            return (isNaN(s) || `${s}`.length > 2) ? s : getNumberWithOrdinal(s) + ',';
-                        }).filter(Boolean).join(' ')
-                    })**](https://magic.wizards.com/en/articles/archive/mtgo-standings/${uri})`
-                )),
+                        }\`${uid}\` • [**${
+                            url.split('https://magic.wizards.com/en/articles/archive/mtgo-standings/')[1]
+                                .toLowerCase()
+                                .replace(/[0-9]/g, '')
+                                .split('-')
+                                .map((s) => s.charAt(0).toUpperCase() + s.substring(1))
+                                .join(' ')
+                        } (${
+                            (new Date(date)).toDateString()
+                            .split(' ').map((s, i) => {
+                                if (i == 0) return;
+                                return (isNaN(s) || `${s}`.length > 2) ? s : getNumberWithOrdinal(s) + ',';
+                            }).filter(Boolean).join(' ')
+                        })**](${url})`
+                    )),
                 {
                     title: "Catalog",
-                    description: `**Top events (from the last ${range} ${range === 1 ? 'day' : 'days'}):**\n`,
+                    description: `**Top events (from the last ${time_interval} ${time_interval === 1 ? 'day' : 'days'}):**\n`,
                 },
                 0, 10, 'description',
             );
 
         } catch (error) {
-            console.error(
-                chalk.white(
-                    `${chalk.blue(`[/Catalog]`)} args: [ ${[
-                        `${chalk.grey(`format:`)} ${!format ? 'None' : chalk.yellow(format)}`,
-                        `${chalk.grey(`event_type:`)} ${!event_type ? 'None' : chalk.yellow(event_type)}`,
-                        `${chalk.grey(`date:`)} ${!date ? 'None' : chalk.yellow(date)}`,,
-                    ].join(', ')} ]\n>> ${chalk.red(error.stack)}`
-                )
-            );
 
             return {
                 ...ERROR_DEFAULTS,

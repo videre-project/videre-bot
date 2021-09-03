@@ -183,15 +183,6 @@ class Bot extends Client {
         await this.loadInteractions();
 
         this.listeners = new Collection();
-
-        // Update status to indicate bot is ready
-        await this.user.setPresence({
-          status: 'online',
-          activity: {
-              name: 'feedback • /help',
-              type: 'LISTENING',
-          }
-        });
       }
 
       console.info(`${chalk.cyanBright('[Bot]')} Bot is now online`);

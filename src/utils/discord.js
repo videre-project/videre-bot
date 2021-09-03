@@ -58,6 +58,8 @@ export const snakeCase = string =>
     .replace(/\s+|_+/g, '_')
     .toUpperCase();
 
+export const toPascalCase = text => text.charAt(0).toUpperCase() + text.slice(1);
+
 /**
  * Parses and validates keys against a types enum.
  */
@@ -218,8 +220,8 @@ export const formatListAsPages = async (items, message, page = 0, length = 10, m
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             "identifiers": [
-              ...pages[page][0].deck.mainboard.map(({ cardName }) => ({ "name": cardName.split('/')[0] })),
-              ...pages[page][0].deck.sideboard.map(({ cardName }) => ({ "name": cardName.split('/')[0] })),
+              ...pages[page][0].deck.mainboard.map(obj => ({ "name": obj.cardname.split('/')[0] })),
+              ...pages[page][0].deck.sideboard.map(obj => ({ "name": obj.cardname.split('/')[0] })),
             ],
           }),
         }).then(res => res.json())

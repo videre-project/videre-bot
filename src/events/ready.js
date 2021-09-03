@@ -6,10 +6,17 @@ import chalk from 'chalk';
 const ReadyEvent = {
   name: 'ready',
   once: true,
-  execute(client) {
+  async execute(client) {
     try {
       console.info(`${chalk.cyanBright('[Bot]')} Connected as ${client.user.username}${chalk.grey(`#${client.user.discriminator}`)}`);
-    } catch {
+      await client.user.setPresence({
+        status: 'online',
+        activity: {
+            name: 'feedback • /help',
+            type: 'LISTENING',
+        }
+      });
+    } catch (error) {
       console.error(chalk.white(`${chalk.yellow(`[events/ready]`)}\n>> ${chalk.red(error.stack)}`));
     }
   },

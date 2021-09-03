@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import config from 'config';
 import { sanitize, validateMessage, registerComponents } from 'utils/discord';
+import { extractURL } from 'utils/deckURL';
 
 /**
  * Handles Discord message events.
@@ -18,7 +19,7 @@ const MessageEvent = {
           // Perform exponential back-off
           for (let i = 1; i <= 10; i++) {
             const _i = parseInt(((((15 * 60) ** (1 / 10)) ** i) * 1000).toFixed(2)) - 974;
-            await new Promise(res => setTimeout(res, _i));;
+            await new Promise(res => setTimeout(res, _i));
             const channel = await client.channels.fetch(msg.channel.id);
             const _msg = await channel.messages.fetch(msg.id);
             if (_msg?.deleted === true) return;
@@ -32,6 +33,13 @@ const MessageEvent = {
           await msg.react('❌'); return;
         }
       }
+      // React to decklist urls.
+      // if (
+      //   /(https?:\/\/[^\s]+)/g.test(msg.content) &&
+      //   extractURL(msg.content)?.length
+      // ) {
+      //   await msg.react('🔎'); return;
+      // }
       // Shadow Discord PacmanBruh
       if (msg.author.id == '670265902750760960') {
         await msg.react('thePAC:701276499403079720');

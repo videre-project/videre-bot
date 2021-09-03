@@ -18,6 +18,8 @@ const config = {
   adminUsers: [ '392815428390354946' ],
   // Database connection string
   connectionString: process.env.DATABASE_URL || 'postgresql://postgres:videre@127.0.0.1:5432/postgres',
+  // API URL
+  api: process.env.API_URL || 'http://localhost:3000/'
 };
 
 export default config;
