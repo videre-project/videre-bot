@@ -1,4 +1,4 @@
-// import chalk from 'chalk';
+import chalk from 'chalk';
 import fetch from 'node-fetch';
 
 import config from 'config';
@@ -60,7 +60,7 @@ const Card = {
       let response = await fetch(scryfallURL);
 
       // Handle conditions for invalid Scryfall response by each query parameter and condition
-      if (response.status !== 200) {
+      if (response.status !== 200 && !(!name && (decks || query))) {
         // Get fuzzy response without set
         const response_1 = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${name}`);
         let data = await response_1.json();
@@ -124,9 +124,13 @@ const Card = {
           `${data.card_faces[1].name} ${data.card_faces[1].mana_cost}`
         ].join(' // '));
 
-      const thumbnailImage = !data?.card_faces ? data.image_uris.png : (!data.card_faces[0]?.image_uris ? data.image_uris.png : data.card_faces[0].image_uris.png);
+      const thumbnailImage = decks || (!name ?? !data?.card_faces)
+        ? data?.image_uris?.png || []
+        : (!data.card_faces[0]?.image_uris ? data.image_uris.png : data.card_faces[0].image_uris.png);
 
-      const footerText = [
+      const footerText = decks || !name
+        ? []
+        : [
           `🖌 ${data.artist}`,
           `${data.set.toUpperCase()} (${data.lang.toUpperCase()}) #${data.collector_number}`,
           data.rarity.replace(/^\w/, (c) => c.toUpperCase())
@@ -269,12 +273,14 @@ const Card = {
           data: { type: INTERACTION_RESPONSE_TYPE.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE },
         });
 
-        const response_1 = await fetch(config.api
+        const response_1 = name
+          ? await fetch(config.api
             + 'metagame/cards?q='
             + (name ? `name=${name}+` : '')
             + (query || '')
-          ).then(res => res.json());
-        if (!response_1?.parameters) {
+          ).then(res => res.json())
+          : [];
+        if (!response_1?.parameters && name) {
           return {
             ...ERROR_DEFAULTS,
             description: response_1.details + '\n' +
@@ -283,7 +289,6 @@ const Card = {
                 : ''
           };
         }
-        const { time_interval } = response_1.parameters;
 
         const response_2 = await fetch(config.api + 'metagame')
           .then(res => res.json());
@@ -295,6 +300,42 @@ const Card = {
                 ? '```\n' + response_2.warnings.join('\n') + '\n```'
                 : ''
           };
+        }
+
+        const { time_interval } = response_1?.parameters || response_2?.parameters;
+
+        if (!name) {
+          const data = Object.values(response_2.data)
+            .map((obj, i) => {
+              const cardsData = obj.cards.data.map((card, i) => ({
+                'Meta %': card.percentage,
+                'Qty': card.count,
+                'Avg': card.average,
+                'Card': card.cardname,
+              }));
+              const table = formatMonospaceTable(cardsData, 16, true)[0].filter(x => x);
+              return table.join('\n');
+            })
+            .filter(Boolean);
+          return {
+            deferred: true,
+            data: await formatListAsPages(
+              data
+                .map((page, i) => {
+                  const format = Object.keys(response_2.data)[i];
+                  return [
+                    {
+                      name: [
+                        'Top cards in', format.charAt(0).toUpperCase() + format.slice(1),
+                        'in the last', time_interval, time_interval == 1 ? 'day' : 'days'
+                      ].join(' ') + ':',
+                      value: `\`\`\`diff\n${ page }\n\`\`\``
+                    }
+                  ];
+                }).flat(1),
+              { title: 'Cards' }, 0, 2, 'fields',
+            )
+          }
         }
 
         const data = Object.values(response_1.data)
@@ -373,10 +414,10 @@ const Card = {
         };
       }
     }  catch (error) {
-      // console.error(
-      //   chalk.cyan(`[/card]`)+
-      //   chalk.grey('\n>> ') + chalk.red(`Error: ${error.stack}`)
-      // );
+      console.error(
+        chalk.cyan(`[/card]`)+
+        chalk.grey('\n>> ') + chalk.red(`Error: ${error.stack}`)
+      );
       return {
         title: 'Error',
         description: error.message,
