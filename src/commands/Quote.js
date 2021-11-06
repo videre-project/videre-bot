@@ -18,7 +18,7 @@ const Quote = {
     async execute({ client, args }) {
         const message_link = args?.message_link;
         const hide_original = args?.hide_original;
-        // try {
+        try {
             const [guildID, channelID, messageID] = message_link.split('discord.com/channels/')[1].split('/');
 
             const channel = await client.channels.fetch(channelID);
@@ -75,25 +75,28 @@ const Quote = {
                     }
                 }
             } else {
+                const _desc = `**>** \`[${[
+                    message?.embeds?.length
+                        ? `${ message.embeds.length } ${ message.embeds.length == 1 ? 'embed' : 'embeds' };`
+                        : undefined,
+                    `${ char_count } ${ char_count == 1 ? 'character' : 'characters' }`
+                ].join(' ')}]\``;
                 if (message?.embeds?.[0]?.title) embed.title = message.embeds[0].title;
-                embed.description = `\`[${[
-                        message?.embeds?.length
-                            ? `${ message.embeds.length } ${ message.embeds.length == 1 ? 'embed' : 'embeds' };`
-                            : undefined,
-                        `${ char_count } ${ char_count == 1 ? 'character' : 'characters' }`
-                    ].join(' ')}]\``;
+                if (embed.title == 'Metagame') {
+                    embed.fields = [{ name: message.embeds[0].fields[0].name, value: _desc }];
+                } else embed.description = _desc;
             }
 
             return embed;
 
-        // } catch (error) {
-        //     return {
-        //         title: 'Error',
-        //         description: `An error occured while quoting a message.`,
-        //         color: 0xe74c3c,
-        //         ephemeral: true,
-        //     };
-        // }
+        } catch (error) {
+            return {
+                title: 'Error',
+                description: `An error occured while quoting a message.`,
+                color: 0xe74c3c,
+                ephemeral: true,
+            };
+        }
     },
 };
 
