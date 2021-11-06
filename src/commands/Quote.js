@@ -24,6 +24,10 @@ const Quote = {
             const channel = await client.channels.fetch(channelID);
             const message = await channel.messages.fetch(messageID);
 
+            const content_char_length = message?.content ? message.content.length : '';
+            const embed_char_length = message?.embeds?.[0] ? message.embeds[0].length : '';
+            const char_count = content_char_length + embed_char_length;
+
             const avatarURL = `https://cdn.discordapp.com/avatars/${ message.author.id }/${ message.author.avatar }.webp?size=128`;
             const channelIcon = `https://cdn.discordapp.com/icons/${ guildID }/${ message.guild.icon }.webp?size=128`;
 
@@ -40,7 +44,7 @@ const Quote = {
                 timestamp: new Date(message.createdTimestamp).toISOString()
             };
 
-            if (!(hide_original)) {
+            if (!(hide_original) || char_count > 2000) {
                 if (message?.embeds.length > 0 && message?.embeds[0]?.type == 'rich') {
                     if (message.embeds.length == 1) {
                         if (message.embeds[0]?.title) embed.title = message.embeds[0].title;
@@ -71,9 +75,7 @@ const Quote = {
                     }
                 }
             } else {
-                const content_char_length = message?.content ? message.content.length : '';
-                const embed_char_length = message?.embeds?.[0] ? message.embeds[0].length : '';
-                const char_count = content_char_length + embed_char_length;
+                if (message?.embeds?.[0]?.title) embed.title = message.embeds[0].title;
                 embed.description = `\`[${[
                         message?.embeds?.length
                             ? `${ message.embeds.length } ${ message.embeds.length == 1 ? 'embed' : 'embeds' };`
