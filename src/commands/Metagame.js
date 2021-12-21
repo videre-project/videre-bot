@@ -56,11 +56,7 @@ const Metagame = {
             const date_range = response
                 .data[format.toLowerCase()]
                 .events.data.map(obj => obj.date)
-                .sort((a, b) => {
-                    var aa = a.split('/').reverse().join(),
-                        bb = b.split('/').reverse().join();
-                    return aa < bb ? -1 : (aa > bb ? 1 : 0);
-                });
+                .sort((a, b) => new Date(a.paymentDate) - new Date(b.paymentDate));
 
             const data = response
                 .data[format.toLowerCase()]
@@ -78,7 +74,7 @@ const Metagame = {
                             'in the last', time_interval, (time_interval == 1 ? 'day' : 'days')
                         ].join(' ') + ':\n'
                         + (date_range?.length
-                            ? '\`(' + date_range[0] + ' to ' + date_range.slice(-1)[0]
+                            ? '\`(' + date_range.slice(-1)[0] + ' to ' + date_range[0]
                                 + (offset ? `; offset by ${ offset } ${ offset == 1 ? 'day' : 'days' }` : '')
                                 + ')\`'
                             : ''),

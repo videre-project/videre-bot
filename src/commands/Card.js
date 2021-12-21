@@ -46,12 +46,8 @@ const Card = {
   ],
   async execute({ client, interaction, args }) {
 
-    const name = args?.name;
-    const set = args?.set;
-    const collectors_number = args?.collector_number;
-    const prices = args?.prices;
+    const { name, set, collectors_number, prices, query } = args;
     const decks = args?.query ? true : args?.decks;
-    const query = args?.query;
 
     try {
       let scryfallURL = `https://api.scryfall.com/cards/named?fuzzy=${name}`;

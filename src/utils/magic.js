@@ -240,7 +240,7 @@ export const drawDeck = async (decklist) => {
       const cardImage = await loadImage(card.image);
       context.drawImage(cardImage, x_offset, y_offset, 223, 311);
       if (card.display_type == 'Companion') {
-        const _cardImage = await loadImage('./public/Companion_Frame.png');
+        const _cardImage = await loadImage('./bin/Companion_Frame.png');
         context.drawImage(_cardImage, x_offset, y_offset, 223, 311);
       }
 

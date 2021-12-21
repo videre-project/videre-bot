@@ -16,8 +16,8 @@ const Quote = {
         },
     ],
     async execute({ client, args }) {
-        const message_link = args?.message_link;
-        const hide_original = args?.hide_original;
+        const { message_link, hide_original } = args;
+        // const hide_original = args?.hide_original;
         try {
             const [guildID, channelID, messageID] = message_link.split('discord.com/channels/')[1].split('/');
 
