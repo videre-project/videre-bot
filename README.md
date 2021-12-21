@@ -10,7 +10,7 @@
 <!-- Main Title -->
 <h2 align="center">
 	The <b>Videre Project</b> Discord Bot
-	<br>for <em>Magic: The Gathering</em>.
+	for <em>Magic: The Gathering</em>.
 </h2>
 
 <!-- Links Ribbon -->
