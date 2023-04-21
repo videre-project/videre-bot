@@ -8,16 +8,10 @@ const ReadyEvent = {
   once: true,
   async execute(client) {
     try {
-      console.info(`${chalk.cyanBright('[Bot]')} Connected as ${client.user.username}${chalk.grey(`#${client.user.discriminator}`)}`);
-      await client.user.setPresence({
-        status: 'online',
-        activity: {
-            name: 'feedback • /help',
-            type: 'LISTENING',
-        }
-      });
+      const username = `${client.user.username}${chalk.grey(`#${client.user.discriminator}`)}`;
+      console.info(`${chalk.cyanBright('[Bot]')} Connected as ${username}`);
     } catch (error) {
-      console.error(chalk.white(`${chalk.yellow(`[events/ready]`)}\n>> ${chalk.red(error.stack)}`));
+      console.error(chalk.white(`${chalk.yellow(`[ReadyEvent]`)}\n>> ${chalk.red(error.stack)}`));
     }
   },
 };

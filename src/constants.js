@@ -1,53 +1,29 @@
-import { Intents } from 'discord.js';
-
+import { Intents, MessageButton } from 'discord.js';
 /**
  * Magic: The Gathering Online supported formats, sanctioned event types, colors, card types, etc.
  */
- export const MTGO = {
-  FORMATS: [
-    { name: 'Standard', value: 'standard' },
-    { name: 'Pioneer', value: 'pioneer' },
-    { name: 'Modern', value: 'modern' },
-    { name: 'Legacy', value: 'legacy' },
-    { name: 'Vintage', value: 'vintage' },
-    { name: 'Pauper', value: 'pauper' },
-  ],
+export const MTGO = {
   EVENT_TYPES: [
     { name: 'Leagues', value: 'league' },
     { name: 'Preliminaries', value: 'preliminary' },
     { name: 'Challenges', value: 'challenge' },
     { name: 'Premiers', value: 'premier' },
   ],
-  // EVENT_TYPES = [
-  //   'mocs',
-  //   'preliminary',
-  //   'challenge',
-  //   'champs',
-  //   'premier',
-  //   'super-qualifier',
-  //   'players-tour-qualifier',
-  //   'showcase-challenge',
-  // ],
-  COLORS: ['C', 'W', 'U', 'B', 'R', 'G'],
-  CARD_TYPES: ['Creature', 'Planeswalker', 'Artifact', 'Enchantment', 'Instant', 'Sorcery', 'Land'],
-  COMPANIONS: [
-    'Gyruda, Doom of Depths',
-    'Jegantha, the Wellspring',
-    'Kaheera, the Orphanguard',
-    'Keruga, the Macrosage',
-    'Lurrus of the Dream-Den',
-    'Lutri, the Spellchaser',
-    'Obosh, the Preypiercer',
-    'Umori, the Collector',
-    'Yorion, Sky Nomad',
-    'Zirda, the Dawnwaker',
-  ]
 };
+
+export const UNICODE = {
+  ZERO_WIDTH: "\u200B",
+  SPACE: "\u3000",
+}
 
 /**
  * Default bot intents and permission scopes.
  */
-export const CLIENT_INTENTS = [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES];
+export const CLIENT_INTENTS = [
+  Intents.FLAGS.GUILDS,
+  Intents.FLAGS.GUILD_MESSAGES,
+  Intents.FLAGS.GUILD_MESSAGE_REACTIONS
+];
 
 /**
  * Embed default properties.
@@ -59,11 +35,67 @@ export const EMBED_DEFAULTS = {
 /**
  * Error Embed default properties.
  */
- export const ERROR_DEFAULTS = {
+export const ERROR_DEFAULTS = {
   title: "Error",
   color: 0xe74c3c,
   ephemeral: true,
 };
+
+export const x_button = (label, hide_emoji = false) =>
+  label
+    ? (hide_emoji
+      ? new MessageButton()
+          .setStyle('DANGER')
+          .setLabel(label)
+          .setCustomId('x_button')
+      : new MessageButton()
+        .setStyle('DANGER')
+        .setLabel(label)
+        .setCustomId('x_button')
+        .setEmoji('924339575248289886'))
+    : new MessageButton()
+      .setStyle('DANGER')
+      .setCustomId('x_button')
+      .setEmoji('924339575248289886');
+
+
+/**
+ * Creates a state-agnostic Error message.
+ * @param {String} message Error message to display.
+ * @param {Object} interaction Discord interaction object.
+ * @returns {Object} Message object
+ */
+export const ERROR_MESSAGE = (description, error, interaction, verbose) => {
+  if (error && Boolean(verbose)) {
+    // Split error stack by line
+    const stack = error.stack.split('\n');
+    // Get first and last line of stack trace.
+    const line_1 = stack[1].split('/');
+    const line_n = stack[stack.length - 1].split('/');
+    // Format lines into minified stack trace block.
+    description = [
+      description,
+      '```bash',
+      `${error.name}: ${error.message}`,
+      line_1[0] + line_1.slice(-1),
+      // Only show last line if non-duplicate.
+      ...(line_1 !== line_n
+        ? [
+          // Get indentation.
+          line_1[0].split('at')[0] + '...',
+          line_n[0] + line_n.slice(-1)
+        ] : []),
+      '```'
+    ].filter(Boolean)
+    .join('\n');
+  }
+  return {
+    embeds: [{ ...ERROR_DEFAULTS, description }],
+    components: [],
+    ephemeral: true,
+    deferred: interaction?.deferred
+  }
+}
 
 /**
  * Discord-enforced message character and size limits.
@@ -116,50 +148,6 @@ export const MESSAGE_COMPONENT_STYLES = {
    * Grey link button. Requires `url` to be specified.
    */
   LINK: 5,
-};
-
-/**
- * The type of interaction this request is.
- */
-export const INTERACTION_TYPE = {
-  /**
-   * A ping.
-   */
-  PING: 1,
-  /**
-   * A command invocation.
-   */
-  APPLICATION_COMMAND: 2,
-  /**
-   * A button interaction.
-   */
-  BUTTON: 3,
-};
-
-/**
- * The type of response that is being sent.
- */
-export const INTERACTION_RESPONSE_TYPE = {
-  /**
-   * Acknowledge a `PING`.
-   */
-  PONG: 1,
-  /**
-   * Respond with a message, showing the user's input.
-   */
-  CHANNEL_MESSAGE_WITH_SOURCE: 4,
-  /**
-   * Acknowledge a command without sending a message, showing the user's input. Requires follow-up.
-   */
-  DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE: 5,
-  /**
-   * For components, ACK an interaction and edit the original message later; the user does not see a loading state.
-   */
-  DEFERRED_UPDATE_MESSAGE: 6,
-  /**
-   * For components, edit the message the component was attached to.
-   */
-  UPDATE_MESSAGE: 7,
 };
 
 /**

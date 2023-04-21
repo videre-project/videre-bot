@@ -1,8 +1,11 @@
 import chalk from 'chalk';
+import { fetch } from 'fetch-h2';
 import { Client, Collection } from 'discord.js';
 import { readdirSync } from 'fs';
 import { resolve } from 'path';
+
 import { validateCommand } from 'utils/discord';
+
 import { CLIENT_INTENTS } from 'constants';
 import config from 'config';
 
@@ -11,16 +14,20 @@ let globalCommands = [];
 let guildCommands = [];
 
 // Count of commands that were patched, posted, or deleted.
-let updatedCommands = 0;
-let registeredCommands = 0;
-let removedCommands = 0;
+// let updatedCommands = 0;
+// let registeredCommands = 0;
+// let removedCommands = 0;
 
 /**
  * An extended `Client` to support slash-command interactions and events.
  */
 class Bot extends Client {
   constructor({ ...rest }) {
-    super({ intents: CLIENT_INTENTS, ...rest });
+    super({
+      intents: CLIENT_INTENTS,
+      partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
+      ...rest
+    });
   }
 
   /**
@@ -84,86 +91,45 @@ class Bot extends Client {
   }
 
   /**
-   * Loads and registers slash command interactions with Discord remote
+   * Loads and registers interactions with Discord remote
    */
   async loadInteractions() {
-    console.info(`${chalk.cyanBright('[Bot]')} Updating slash commands...`);
-    // Get remote targets
-    const globalRemote = () => this.api.applications(this.user.id);
-    const guildRemote = () =>
-      config.guild
-        ? this.api.applications(this.user.id).guilds(config.guild)
-        : undefined;
+    try {
+      const global_url = `/applications/${this.user.id}/commands`;
 
-    // Get remote cache
-    const globalCache = await globalRemote().commands.get();
-    const guildCache = await guildRemote().commands.get();
+      await fetch(`https://discord.com/api/v9${global_url}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bot ${config.token}`,
+          'User-Agent': 'Videre Project Discord Bot',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(
+          this.commands
+            .filter(({ name }) => globalCommands.includes(name))
+            .map(validateCommand)
+        ),
+      });
 
-    // Update remote
-    await Promise.all(
-      this.commands.map(async command => {
-        // Validate command props
-        const data = validateCommand(command);
+      const guild_url = `/applications/${this.user.id}/guilds/${config.guild}/commands`;
 
-        if (globalCommands.includes(command.name)) {
-          const globalCached = globalCache?.find(({ name }) => name === command.name);
-          if (globalCached?.id) {
-            if(globalCached?.name !== validateCommand(command)?.name || globalCached?.description !== validateCommand(command)?.description || JSON.stringify(globalCached?.options) !== JSON.stringify(validateCommand(command)?.options)) {
-              updatedCommands++;
-              await globalRemote().commands(globalCached.id).patch({ data });
-            }
-          } else {
-            registeredCommands++;
-            await globalRemote().commands.post({ data });
-          }
-        } else if (config.guild) {
-          const guildCached = guildCache?.find(({ name }) => name === command.name);
-          if (guildCached?.id) {
-            if(guildCached?.name !== validateCommand(command)?.name || guildCached?.description !== validateCommand(command)?.description || JSON.stringify(guildCached?.options) !== JSON.stringify(validateCommand(command)?.options)) {
-              updatedCommands++;
-              await guildRemote().commands(guildCached.id).patch({ data });
-            }
-          } else {
-            registeredCommands++;
-            await guildRemote().commands.post({ data });
-          }
-        }
-      })
-    );
+      await fetch(`https://discord.com/api/v9${guild_url}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bot ${config.token}`,
+          'User-Agent': 'Videre Project Discord Bot',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(
+          this.commands
+            .filter(({ name }) => guildCommands.includes(name))
+            .map(validateCommand)
+        ),
+      });
 
-    // Purge removed global commands
-    if (globalCache) await Promise.all(
-      globalCache.map(async command => {
-        const exists = this.commands.get(command.name);
-        if (!exists || !globalCommands.includes(command.name)) {
-          removedCommands++;
-          await globalRemote().commands(command.id).delete();
-        }
-      })
-    );
-
-    // Purge removed guild commands
-    if (guildCache) await Promise.all(
-      guildCache.map(async command => {
-        const exists = this.commands.get(command.name);
-        if (!exists || !guildCommands.includes(command.name)) {
-          removedCommands++;
-          await guildRemote().commands(command.id).delete();
-        }
-      })
-    );
-
-    if (updatedCommands > 0) {
-      console.info(`${chalk.cyanBright('[Bot]')} ${updatedCommands} ${updatedCommands == 1 ? 'command' : 'commands'} updated`);
-    }
-    if (registeredCommands > 0) {
-      console.info(`${chalk.cyanBright('[Bot]')} ${registeredCommands} ${registeredCommands == 1 ? 'command' : 'commands'} registered`);
-    }
-    if (removedCommands > 0) {
-      console.info(`${chalk.cyanBright('[Bot]')} ${removedCommands} ${removedCommands == 1 ? 'command' : 'commands'} removed`);
-    }
-    if (updatedCommands + registeredCommands + removedCommands === 0) {
-      console.info(`${chalk.cyanBright('[Bot]')} No commands changed`);
+      console.info(`${chalk.cyanBright('[Bot]')} Updated interactions`);
+    } catch (error) {
+      console.error(`bot#loadInteractions >> ${error.stack}`);
     }
   }
 
@@ -185,10 +151,16 @@ class Bot extends Client {
         this.listeners = new Collection();
       }
 
+      // Fetch all emoji guilds.
+      [
+        '772093785176801310', // Videre Discord
+        '922909415118614538' // Emoji Discord 1
+      ].forEach(id => this.guilds.resolve(id));
+
       console.info(`${chalk.cyanBright('[Bot]')} Bot is now online`);
 
     } catch (error) {
-      console.error(chalk.white(`${chalk.red(`[bot/index#start]`)}\n>> ${chalk.red(error.stack)}`));
+      console.error(chalk.white(`${chalk.red(`[bot#start]`)}\n>> ${chalk.red(error.stack)}`));
     }
   }
 }

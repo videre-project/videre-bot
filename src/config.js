@@ -13,13 +13,11 @@ const config = {
   // Server for local testing of slash commands
   guild: process.env.GUILD,
   // Server for mana symbol emojis
-  emojiGuild: process.env.EMOJI_GUILD,
-  // users who have perms to control bot behavior in production
-  adminUsers: [ '392815428390354946' ],
+  // emojiGuild: process.env.EMOJI_GUILD,
   // Database connection string
   connectionString: process.env.DATABASE_URL || 'postgresql://postgres:videre@127.0.0.1:5432/postgres',
   // API URL
-  api: process.env.API_URL || 'http://localhost:3000/'
+  api: 'http://localhost:5001/' //process.env.API_URL || 'http://localhost:3000/'
 };
 
 export default config;

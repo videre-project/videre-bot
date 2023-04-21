@@ -38,7 +38,7 @@ def getPriceHistory(matchedName, set, time_interval = 14):
 
     try:
         card_slug = findItem(
-            data = requests.get(f"https://api.mtgstocks.com/card_sets/{set_id}").json()['prints'],
+            data = requests.get(f"https://api.mtgstocks.com/card_sets/{ set_id }").json()['prints'],
             item = matchedName, match = 'name',
             attribute = 'slug'
         )
@@ -110,8 +110,9 @@ def getPriceHistory(matchedName, set, time_interval = 14):
             if (data[cols].iloc[-1] + data[cols].iloc[-2] > -1):
                 category_name += " (${:,.2f})".format(data[cols].iloc[-1])
 
+            filtered = data[cols][data[cols] < (data[cols].mean() + 1000)]
             ax.plot(
-                data[cols][data[cols] < (data[cols].mean() + 1000)], #[~is_outlier(data[cols])]],
+                filtered, #[~is_outlier(data[cols])]],
                 label = category_name.replace(" ($nan)", ""),
                 c = colorMap[cols]
             )

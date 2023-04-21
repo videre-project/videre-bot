@@ -18,7 +18,7 @@
 	<strong>
 	<a href="https://videreproject.com/videre-bot">Website <code>(WIP)</code></a>
 	•
-	<!-- To Do --><a href="https://github.com/videre-project/videre-bot/wiki">Docs <code>(WIP)</code></a>
+	<!-- To Do --><a href="https://github.com/videre-project/videre-project/wiki/Videre-Bot">Docs <code>(WIP)</code></a>
 	•
 	<a href="#">
 		<img
@@ -27,11 +27,11 @@
 	</a>
 	<a href="https://discord.gg/MBGatsNNSj">Discord</a>
 	•
-	<!-- To Do --><a href='https://github.com/videre-project/videre-bot/issues'>Issue Tracker <code>(WIP)</code></a>
+	<!-- To Do --><a href='https://github.com/videre-project/videre-project/issues?q=is:issue+is:open+label:"service: videre-bot"'>Issue Tracker <code>(WIP)</code></a>
 	•
-	<!-- To Do --><a href="https://github.com/videre-project/videre-bot/blob/main/CONTRIBUTING.md">Contribute</a>
+	<!-- To Do --><a href="https://github.com/videre-project/videre-project/blob/main/services/videre-bot/CONTRIBUTING.md">Contribute</a>
 	•
-	<a href="https://github.com/videre-project/videre-bot/blob/main/LICENSE">License</a>
+	<a href="https://github.com/videre-project/videre-project/blob/main/services/videre-bot/LICENSE">License</a>
 	</strong>
 </p>
 

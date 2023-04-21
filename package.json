@@ -9,10 +9,10 @@
   "main": "src/config.js",
   "private": true,
   "devDependencies": {
-    "eslint": "^7.28.0",
-    "jest": "27.0.4",
-    "nodemon": "2.0.7",
-    "prettier": "^2.3.1",
+    "eslint": "^8.4.0",
+    "jest": "^27.4.3",
+    "nodemon": "^2.0.15",
+    "prettier": "^2.5.1",
     "rimraf": "^3.0.2"
   },
   "dependencies": {
@@ -21,19 +21,19 @@
     "@babel/node": "^7.14.5",
     "@babel/plugin-transform-runtime": "^7.14.5",
     "@babel/preset-env": "^7.14.5",
+    "@videre/cli": "1.0.0",
+    "@videre/database": "1.0.0",
+    "@videre/magic": "1.0.0",
+    "@videre/querybuilder": "1.0.0",
     "babel-plugin-module-resolver": "^4.1.0",
     "canvas": "^2.8.0",
     "chalk": "4.1.1",
-    "discord.js": "^12.5.3",
-    "dompurify": "^2.2.9",
+    "discord.js": "^13.3.1",
+    "dompurify": "^2.3.3",
     "dotenv": "10.0.0",
-    "node-fetch": "^2.6.1",
-    "postgres": "^1.0.2",
-    "puppeteer": "^10.1.0",
-    "puppeteer-extra": "^3.1.18",
-    "puppeteer-extra-plugin-stealth": "^2.7.8",
-    "request": "^2.88.2",
-    "request-promise": "^4.2.6"
+    "fetch-h2": "^3.0.1",
+    "jsdom": "^19.0.0",
+    "node-fetch": "^2.6.1"
   },
   "scripts": {
     "start": "nodemon --exec babel-node src",
