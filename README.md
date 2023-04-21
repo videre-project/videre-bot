@@ -3,7 +3,7 @@
 	<a href="#"> <!-- Prevents Github from linking banner to source on click -->
 		<img
 		alt="Videre Bot"
-		src="./bin/Github Banner.png">
+		src="./assets/Github Banner.png">
 	</a>
 </h3>
 
@@ -23,7 +23,7 @@
 	<a href="#">
 		<img
 		width="15"
-		src="./bin/Discord Logo.png">
+		src="./assets/Discord Logo.png">
 	</a>
 	<a href="https://discord.gg/MBGatsNNSj">Discord</a>
 	•
