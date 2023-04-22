@@ -21,10 +21,10 @@
     "@babel/node": "^7.14.5",
     "@babel/plugin-transform-runtime": "^7.14.5",
     "@babel/preset-env": "^7.14.5",
-    "@videre/cli": "1.0.0",
-    "@videre/database": "1.0.0",
-    "@videre/magic": "1.0.0",
-    "@videre/querybuilder": "1.0.0",
+    "@videre/cli": "*",
+    "@videre/database": "*",
+    "@videre/magic": "*",
+    "@videre/querybuilder": "*",
     "babel-plugin-module-resolver": "^4.1.0",
     "canvas": "^2.8.0",
     "chalk": "4.1.1",
@@ -33,7 +33,16 @@
     "dotenv": "10.0.0",
     "fetch-h2": "^3.0.1",
     "jsdom": "^19.0.0",
-    "node-fetch": "^2.6.1"
+    "node-fetch": "^2.6.1",
+    "puppeteer": "^19.10.1",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  },
+  "resolutions": {
+    "@videre/cli": "videre-project/videre-project#workspace=@videre/cli",
+    "@videre/database": "videre-project/videre-project#workspace=@videre/database",
+    "@videre/magic": "videre-project/videre-project#workspace=@videre/magic",
+    "@videre/querybuilder": "videre-project/videre-project#workspace=@videre/querybuilder"
   },
   "scripts": {
     "start": "nodemon --exec babel-node src",
@@ -45,5 +54,6 @@
   },
   "jest": {
     "testEnvironment": "node"
-  }
+  },
+  "packageManager": "yarn@3.5.0"
 }

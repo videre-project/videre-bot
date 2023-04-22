@@ -22,11 +22,12 @@ let guildCommands = [];
  * An extended `Client` to support slash-command interactions and events.
  */
 class Bot extends Client {
-  constructor({ ...rest }) {
+  // FIXME: Handle Babel deconstruction error
+  constructor(/*{ ...rest }*/) {
     super({
       intents: CLIENT_INTENTS,
       partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
-      ...rest
+      // ...rest
     });
   }
 

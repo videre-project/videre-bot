@@ -4,6 +4,11 @@ build
 .env
 *.log
 
+# Yarn
+.yarn/*
+!.yarn/releases
+!.yarn/plugins
+
 # Editor directories and files
 .idea
 .vscode
